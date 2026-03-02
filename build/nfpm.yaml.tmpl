@@ -1,0 +1,19 @@
+# nfpm example configuration file
+#
+# check https://nfpm.goreleaser.com/configuration for detailed usage
+#
+name: "bbpr2md"
+arch: "${ARCH}"
+platform: "${PLATFORM}"
+version: "${VERSION}"
+section: "default"
+priority: "extra"
+provides:
+  - "bbpr2md"
+maintainer: "Scott Jackson <scottmmjackson@gmail.com>"
+description: Bitbucket Pull Request to Markdown CLI tool.
+homepage: "https://github.com/scottmmjackson/bbpr2md"
+license: "BSD 3.0"
+contents:
+- src: target/${TARGET}/release/bbpr2md
+  dst: ${BIND_FILE}

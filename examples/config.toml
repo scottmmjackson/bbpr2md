@@ -1,0 +1,9 @@
+# Example bbpr2md configuration
+# This file is typically located in a cross-platform standard config dir
+# (e.g. ~/Library/Application Support/rs.bbpr2md/default-config.toml on macOS)
+
+username = "your-atlassian-email-address"
+# Create a scoped app password with read pullrequests.
+app_password = "your-scoped-app-password"
+workspace = "your-workspace"
+repo_slug = "your-favorite-repo"

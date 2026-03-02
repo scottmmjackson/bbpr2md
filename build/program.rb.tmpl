@@ -1,0 +1,49 @@
+# typed: false
+# frozen_string_literal: true
+
+class Bbpr2md < Formula
+  desc "Bitbucket Pull Request to Markdown CLI tool."
+  homepage "https://github.com/scottmmjackson/bbpr2md"
+  version "${VERSION}"
+
+  on_macos do
+    if Hardware::CPU.intel?
+      url "${X86_DARWIN_RELEASE_URL}"
+      sha256 "${X86_DARWIN_RELEASE_SHA}"
+
+      def install
+        bin.install "bbpr2md"
+      end
+    end
+    if Hardware::CPU.arm?
+      url "${ARM64_DARWIN_RELEASE_URL}"
+      sha256 "${ARM64_DARWIN_RELEASE_SHA}"
+
+      def install
+        bin.install "bbpr2md"
+      end
+    end
+  end
+  on_linux do
+    if Hardware::CPU.arm? && Hardware::CPU.is_64_bit?
+      url "${ARM64_LINUX_RELEASE_URL}"
+      sha256 "${ARM64_LINUX_RELEASE_SHA}"
+
+      def install
+        bin.install "bbpr2md"
+      end
+    end
+    if Hardware::CPU.intel?
+      url "${X86_LINUX_RELEASE_URL}"
+      sha256 "${X86_LINUX_RELEASE_SHA}"
+
+      def install
+        bin.install "bbpr2md"
+      end
+    end
+  end
+
+  test do
+    system "#{bin}/bbpr2md --version"
+  end
+end
