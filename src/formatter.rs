@@ -49,11 +49,10 @@ pub fn format_to_markdown(comments: &[Comment], tasks: &[Task]) -> String {
                 output.push_str(&content.replace('\n', "\n> "));
             } else {
                 output.push_str(&header);
-                output.push_str("\n");
+                output.push('\n');
                 output.push_str(content);
             }
             output.push_str("\n\n---\n\n");
-
         }
     }
 

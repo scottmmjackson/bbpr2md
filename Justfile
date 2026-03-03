@@ -94,7 +94,7 @@ package-termux:
       -f <(VERSION={{ version }} BIND_FILE=/data/data/com.termux/files ARCH=${DEBARCH} envsubst < build/nfpm.yaml.tmpl) \
       --target dist/tmp/
     mv dist/tmp/bbpr2md_{{ version }}_${DEBARCH}.deb dist/{{ target }}/bbpr2md_{{ version }}_${DEBARCH}.termux.deb
-    rmdir dist/tmp
+    rm -r dist/tmp
 
 linux-packages:
     just target=x86_64-unknown-linux-gnu package_type=deb package
