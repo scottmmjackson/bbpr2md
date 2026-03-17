@@ -64,6 +64,22 @@ struct Args {
     /// Print debug information (e.g., request headers).
     #[arg(long)]
     debug: bool,
+
+    /// Include only the pull request description in the output.
+    #[arg(long, conflicts_with_all = ["comments_only", "tasks_only", "comments_and_tasks"])]
+    description_only: bool,
+
+    /// Include only the pull request comments in the output.
+    #[arg(long, conflicts_with_all = ["description_only", "tasks_only", "comments_and_tasks"])]
+    comments_only: bool,
+
+    /// Include only the pull request tasks in the output.
+    #[arg(long, conflicts_with_all = ["description_only", "comments_only", "comments_and_tasks"])]
+    tasks_only: bool,
+
+    /// Include only comments and tasks (exclude description).
+    #[arg(long, conflicts_with_all = ["description_only", "comments_only", "tasks_only"])]
+    comments_and_tasks: bool,
 }
 
 #[tokio::main]
@@ -130,16 +146,43 @@ async fn main() -> Result<()> {
 
     let client = BitbucketClient::new(username, password, token, args.debug);
 
-    eprintln!(
-        "Fetching comments for PR #{} from {}/{}...",
-        pr_id, workspace, repo_slug
-    );
-    let comments = client.get_comments(&workspace, &repo_slug, pr_id).await?;
+    let (include_description, include_comments, include_tasks) = if args.description_only {
+        (true, false, false)
+    } else if args.comments_only {
+        (false, true, false)
+    } else if args.tasks_only {
+        (false, false, true)
+    } else if args.comments_and_tasks {
+        (false, true, true)
+    } else {
+        (true, true, true)
+    };
 
-    eprintln!("Fetching tasks for PR #{}...", pr_id);
-    let tasks = client.get_tasks(&workspace, &repo_slug, pr_id).await?;
+    let pr = if include_description {
+        eprintln!("Fetching pull request details for #{}...", pr_id);
+        Some(client.get_pull_request(&workspace, &repo_slug, pr_id).await?)
+    } else {
+        None
+    };
 
-    let markdown = format_to_markdown(&comments, &tasks);
+    let comments = if include_comments {
+        eprintln!(
+            "Fetching comments for PR #{} from {}/{}...",
+            pr_id, workspace, repo_slug
+        );
+        client.get_comments(&workspace, &repo_slug, pr_id).await?
+    } else {
+        Vec::new()
+    };
+
+    let tasks = if include_tasks {
+        eprintln!("Fetching tasks for PR #{}...", pr_id);
+        client.get_tasks(&workspace, &repo_slug, pr_id).await?
+    } else {
+        Vec::new()
+    };
+
+    let markdown = format_to_markdown(pr.as_ref(), &comments, &tasks);
 
     if let Some(output_path) = args.output {
         fs::write(&output_path, markdown)

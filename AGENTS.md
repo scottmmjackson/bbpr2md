@@ -21,6 +21,10 @@ A Rust CLI tool that fetches comments and tasks from a Bitbucket pull request an
     - **Task States**: The Bitbucket API uses `UNRESOLVED` as the variant for open tasks (contrary to some documentation suggesting `OPEN`). The `TaskState` enum handles this.
     - **Comment Threads**: Comments are flattened in the API response. Threading is reconstructed by checking the `parent` field. In Markdown, replies are indented using blockquotes (`> `) to maintain visual hierarchy.
     - **Deleted Comments**: The formatter filters out comments where `deleted: true` to keep the context clean for AI agents.
+- **PR Descriptions & Section Filtering**:
+    - **Description Inclusion**: The PR title and description are included by default to provide top-level context.
+    - **Markdown Quoting**: The PR description (which may contain its own Markdown headers) is quoted using blockquotes (`> `). This prevents AI agents from confusing description subheadings with the main report's structure.
+    - **Granular Control**: CLI flags (`--description-only`, `--comments-only`, `--tasks-only`, `--comments-and-tasks`) allow agents to fetch only the specific context they need, reducing token usage.
 - **Configuration Management**:
     - Uses the `confy` crate. The application name is `bbpr2md`.
     - Default config path can be found via `bbpr2md --init`.
@@ -28,3 +32,13 @@ A Rust CLI tool that fetches comments and tasks from a Bitbucket pull request an
     - Replicates a robust cross-platform system using `just`.
     - Supports macOS (Intel/M1), Linux (amd64/arm64/termux), and Windows.
     - Automation is handled via `.github/workflows/release.yml`.
+
+### Coding Standards
+
+- Include docstrings on all functions, traits, and structs.
+- Always test new code for correctness and robustness.
+- Always update the README.md to reflect the latest changes.
+- Always version skill files in `examples/` in lockstep with the tool's version in `Cargo.toml`.
+- Ensure skill files contain instructions on how to update themselves from the GitHub repository (`https://github.com/scottmmjackson/bbpr2md`) if they are out of date.
+- Update AGENTS.md with any newly-adopted coding standards, requirements, implementation lessons, and maintenance notes.
+- Update the example skills in `examples` to reflect the latest changes.

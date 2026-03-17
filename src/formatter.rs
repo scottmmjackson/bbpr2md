@@ -1,9 +1,30 @@
-use crate::client::{Comment, Task, TaskState};
+use crate::client::{Comment, PullRequest, Task, TaskState};
 
-/// Formats a list of Bitbucket comments and tasks into a Markdown string.
-pub fn format_to_markdown(comments: &[Comment], tasks: &[Task]) -> String {
+/// Formats a Bitbucket pull request, comments, and tasks into a Markdown string.
+///
+/// If `pr` is provided, the pull request title and description are included.
+/// Comments are filtered to exclude deleted ones and grouped by file path.
+/// Tasks are listed with their current state and creator.
+pub fn format_to_markdown(
+    pr: Option<&PullRequest>,
+    comments: &[Comment],
+    tasks: &[Task],
+) -> String {
     let mut output = String::new();
-    output.push_str("# Bitbucket Pull Request Feedback\n\n");
+
+    if let Some(pr) = pr {
+        output.push_str(&format!("# PR #{}: {}\n\n", pr.id, pr.title));
+        output.push_str("## Description\n\n");
+        if pr.description.is_empty() {
+            output.push_str("*No description provided.*\n");
+        } else {
+            output.push_str("> ");
+            output.push_str(&pr.description.replace('\n', "\n> "));
+        }
+        output.push_str("\n\n");
+    } else {
+        output.push_str("# Bitbucket Pull Request Feedback\n\n");
+    }
 
     if !comments.is_empty() {
         output.push_str("## Comments\n\n");
@@ -78,10 +99,34 @@ mod tests {
     use super::*;
     use crate::client::{Content, Inline, Task, TaskState, User};
 
+    fn mock_user() -> User {
+        User {
+            display_name: "User A".to_string(),
+            account_id: "a".to_string(),
+        }
+    }
+
     #[test]
     fn test_format_to_markdown_empty() {
-        let result = format_to_markdown(&[], &[]);
+        let result = format_to_markdown(None, &[], &[]);
         assert!(result.contains("# Bitbucket Pull Request Feedback"));
+    }
+
+    #[test]
+    fn test_format_to_markdown_with_pr() {
+        let pr = PullRequest {
+            id: 123,
+            title: "My PR".to_string(),
+            description: "Some description\nWith multiple lines".to_string(),
+            author: mock_user(),
+            created_on: "2023-10-27T10:00:00Z".to_string(),
+            updated_on: "2023-10-27T10:00:00Z".to_string(),
+            state: "OPEN".to_string(),
+        };
+        let result = format_to_markdown(Some(&pr), &[], &[]);
+        assert!(result.contains("# PR #123: My PR"));
+        assert!(result.contains("## Description"));
+        assert!(result.contains("> Some description\n> With multiple lines"));
     }
 
     #[test]
@@ -92,10 +137,7 @@ mod tests {
                 raw: "Comment 1".to_string(),
                 html: None,
             },
-            user: User {
-                display_name: "User A".to_string(),
-                account_id: "a".to_string(),
-            },
+            user: mock_user(),
             created_on: "2023-10-27T10:00:00Z".to_string(),
             updated_on: None,
             inline: Some(Inline {
@@ -106,7 +148,7 @@ mod tests {
             parent: None,
             deleted: false,
         }];
-        let result = format_to_markdown(&comments, &[]);
+        let result = format_to_markdown(None, &comments, &[]);
         assert!(result.contains("### File: `src/main.rs`"));
         assert!(result.contains("**User A** (2023-10-27) (Line 10)"));
         assert!(result.contains("Comment 1"));
@@ -121,16 +163,13 @@ mod tests {
                 html: None,
             },
             state: TaskState::Unresolved,
-            creator: User {
-                display_name: "User B".to_string(),
-                account_id: "b".to_string(),
-            },
+            creator: mock_user(),
             created_on: "2023-10-27T10:00:00Z".to_string(),
             updated_on: None,
             comment: None,
         }];
-        let result = format_to_markdown(&[], &tasks);
+        let result = format_to_markdown(None, &[], &tasks);
         assert!(result.contains("## Tasks"));
-        assert!(result.contains("- [ ] Task 1 (Creator: User B, State: UNRESOLVED)"));
+        assert!(result.contains("- [ ] Task 1 (Creator: User A, State: UNRESOLVED)"));
     }
 }

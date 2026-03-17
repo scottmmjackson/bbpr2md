@@ -89,7 +89,7 @@ package-termux:
     mkdir -p dist/{{ target }}
     mkdir -p dist/tmp/
     source build/{{ target }}.env
-    export DEBARCH="{{ if target =~ '^x86_64' { "amd64" } else { "aarch64" } }}"
+    export DEBARCH="{{ if target =~ '^x86_64' { "amd64" } else { "arm64" } }}"
     nfpm package -p {{ package_type }} \
       -f <(VERSION={{ version }} BIND_FILE=/data/data/com.termux/files ARCH=${DEBARCH} envsubst < build/nfpm.yaml.tmpl) \
       --target dist/tmp/

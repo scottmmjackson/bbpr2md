@@ -141,6 +141,26 @@ impl std::fmt::Display for BitbucketError {
     }
 }
 
+/// Represents a Bitbucket pull request.
+#[allow(dead_code)]
+#[derive(Debug, Deserialize)]
+pub struct PullRequest {
+    /// The pull request ID.
+    pub id: u32,
+    /// The pull request title.
+    pub title: String,
+    /// The pull request description.
+    pub description: String,
+    /// The user who created the pull request.
+    pub author: User,
+    /// The creation date-time string.
+    pub created_on: String,
+    /// The last update date-time string.
+    pub updated_on: String,
+    /// The current state of the pull request.
+    pub state: String,
+}
+
 /// A client for interacting with the Bitbucket API.
 pub struct BitbucketClient {
     client: Client,
@@ -182,6 +202,47 @@ impl BitbucketClient {
             b = b.basic_auth(u, Some(p));
         }
         b
+    }
+
+    /// Fetches pull request details.
+    pub async fn get_pull_request(
+        &self,
+        workspace: &str,
+        repo_slug: &str,
+        pr_id: u32,
+    ) -> Result<PullRequest> {
+        let url = format!(
+            "{}/repositories/{}/{}/pullrequests/{}",
+            self.base_url, workspace, repo_slug, pr_id
+        );
+
+        let mut req_builder = self.client.get(&url);
+        req_builder = self.auth_request(req_builder);
+
+        if self.debug {
+            eprintln!("GET {}", url);
+        }
+
+        let resp = req_builder
+            .send()
+            .await
+            .context("Failed to send request for pull request details")?;
+
+        if !resp.status().is_success() {
+            let status = resp.status();
+            if let Ok(err_resp) = resp.json::<BitbucketError>().await {
+                anyhow::bail!("API request for pull request failed ({}): {}", status, err_resp);
+            } else {
+                anyhow::bail!("API request for pull request failed with status {}", status);
+            }
+        }
+
+        let pr = resp
+            .json::<PullRequest>()
+            .await
+            .context("Failed to parse pull request response")?;
+
+        Ok(pr)
     }
 
     /// Fetches all comments for a given pull request, handling pagination.

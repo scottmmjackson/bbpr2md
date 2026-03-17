@@ -13,7 +13,7 @@ Run the following command to create a default configuration file in your system'
 bbpr2md --init
 ```
 
-The command will print the path to the created file (e.g., `~/Library/Application Support/rs.bbpr2md/default-config.toml`).
+The command will print the path to the created file (e.g., `~/.config/bbpr2md/default-config.toml`).
 
 ### 2. Configure Defaults
 Edit the created file to set your default values:
@@ -54,6 +54,10 @@ The primary goal of `bbpr2md` is to simplify the feedback loop between code revi
 -   `--app-password <PW>`: App Password (Basic Auth).
 -   `--output <FILE>`: Save Markdown to a file instead of printing to stdout.
 -   `--debug`: Print debug information (like requested URLs).
+-   `--description-only`: Include only the pull request description.
+-   `--comments-only`: Include only the comments.
+-   `--tasks-only`: Include only the tasks.
+-   `--comments-and-tasks`: Include only comments and tasks (exclude description).
 
 ## Environment Variables
 
