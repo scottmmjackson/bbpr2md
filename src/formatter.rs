@@ -84,9 +84,15 @@ pub fn format_to_markdown(
                 TaskState::Unresolved => "[ ]",
                 TaskState::Resolved => "[x]",
             };
+            let creator_name = task
+                .creator
+                .as_ref()
+                .map(|u| u.display_name.as_str())
+                .unwrap_or("Unknown");
+
             output.push_str(&format!(
                 "- {} {} (Creator: {}, State: {})\n",
-                state_icon, task.content.raw, task.creator.display_name, task.state
+                state_icon, task.content.raw, creator_name, task.state
             ));
         }
     }
@@ -163,7 +169,7 @@ mod tests {
                 html: None,
             },
             state: TaskState::Unresolved,
-            creator: mock_user(),
+            creator: Some(mock_user()),
             created_on: "2023-10-27T10:00:00Z".to_string(),
             updated_on: None,
             comment: None,
@@ -171,5 +177,23 @@ mod tests {
         let result = format_to_markdown(None, &[], &tasks);
         assert!(result.contains("## Tasks"));
         assert!(result.contains("- [ ] Task 1 (Creator: User A, State: UNRESOLVED)"));
+    }
+
+    #[test]
+    fn test_format_to_markdown_with_task_no_creator() {
+        let tasks = vec![Task {
+            id: 1,
+            content: Content {
+                raw: "Task 2".to_string(),
+                html: None,
+            },
+            state: TaskState::Unresolved,
+            creator: None,
+            created_on: "2023-10-27T10:00:00Z".to_string(),
+            updated_on: None,
+            comment: None,
+        }];
+        let result = format_to_markdown(None, &[], &tasks);
+        assert!(result.contains("- [ ] Task 2 (Creator: Unknown, State: UNRESOLVED)"));
     }
 }

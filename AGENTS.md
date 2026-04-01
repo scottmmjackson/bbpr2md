@@ -19,6 +19,7 @@ A Rust CLI tool that fetches comments and tasks from a Bitbucket pull request an
     - **Bearer Auth**: Supported for Bitbucket **Personal Access Tokens (PATs)**.
 - **API Data Model**:
     - **Task States**: The Bitbucket API uses `UNRESOLVED` as the variant for open tasks (contrary to some documentation suggesting `OPEN`). The `TaskState` enum handles this.
+    - **Null Creators**: Some tasks (e.g., system-generated or from deleted users) may have a `null` creator. The `creator` field in `Task` is optional, and the formatter defaults to "Unknown".
     - **Comment Threads**: Comments are flattened in the API response. Threading is reconstructed by checking the `parent` field. In Markdown, replies are indented using blockquotes (`> `) to maintain visual hierarchy.
     - **Deleted Comments**: The formatter filters out comments where `deleted: true` to keep the context clean for AI agents.
 - **PR Descriptions & Section Filtering**:
@@ -32,6 +33,15 @@ A Rust CLI tool that fetches comments and tasks from a Bitbucket pull request an
     - Replicates a robust cross-platform system using `just`.
     - Supports macOS (Intel/M1), Linux (amd64/arm64/termux), and Windows.
     - Automation is handled via `.github/workflows/release.yml`.
+- **Skills**:
+    - **Claude**: Claude skills require YAML frontmatter with keys "name" and "description". They are installed at
+      `.claude/skills/<skill name>/SKILL.md` - globally when that path is from the user's home directory. Remember that
+      the frontmatter is always loaded as context, but the skill file itself has to be requested by the model to load.
+      See 
+      [Claude documentation for more information](https://platform.claude.com/docs/en/agents-and-tools/agent-skills/overview)
+    - **Gemini**: Gemini skills are installed at `.gemini/skills/<skill name>/SKILL.md`. They also require a YAML
+      frontmatter with keys "name" and "description". See 
+      [Gemini documentation for more information](https://geminicli.com/docs/cli/creating-skills/)
 
 ### Coding Standards
 
@@ -42,3 +52,4 @@ A Rust CLI tool that fetches comments and tasks from a Bitbucket pull request an
 - Ensure skill files contain instructions on how to update themselves from the GitHub repository (`https://github.com/scottmmjackson/bbpr2md`) if they are out of date.
 - Update AGENTS.md with any newly-adopted coding standards, requirements, implementation lessons, and maintenance notes.
 - Update the example skills in `examples` to reflect the latest changes.
+- Bump the version in `Cargo.toml` when adding new features.

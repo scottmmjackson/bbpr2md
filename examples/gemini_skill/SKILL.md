@@ -1,19 +1,23 @@
+---
+name: bbpr2md-bitbucket-pull-request-describer
+description: Knowledge of gathering information about Bitbucket pull requests using the `bbpr2md` tool.
+---
 # Bitbucket PR Context Skill
 
 **Version**: 0.1.3
 
 This skill allows Gemini CLI to efficiently gather and address pull request feedback using the `bbpr2md` tool.
 
-<instructions>
-1. **Objective**: When a user asks you to "address PR feedback" or "look at PR #123", use `bbpr2md` to get the context.
-2. **Context Gathering**: Run `cargo run -- --pr-id <ID>` (or use the installed binary) to get the Markdown feedback.
-    - Use `--description-only` if you only need the PR context.
-    - Use `--tasks-only` if you only need the current task list.
-    - Use `--comments-only` if you only need to see the discussion.
-3. **Surgical Edits**: Focus on the specific files and line numbers identified in the comments.
-4. **Verification**: After making edits, cross-reference the `Tasks` list from the `bbpr2md` output.
-5. **Status Reporting**: Inform the user which comments you've addressed and if there are any pending tasks you couldn't resolve automatically.
-</instructions>
+### Abilities
+- **Comprehensive Feedback Retrieval**: Fetches the PR title, description, all non-deleted comments, and tasks in a single command.
+- **Context Preservation**: Quotes the PR description to prevent Markdown header confusion for AI agents.
+- **Granular Control**: Supports flags like `--description-only`, `--comments-only`, and `--tasks-only` for targeted information retrieval.
+- **Organized Comments**: Groups comments by file and provides line number information.
+
+### Use Cases
+- **Review Resolution**: Quickly identify all areas in the codebase that require attention from reviewer comments.
+- **Status Reporting**: Track progress by viewing the list of resolved and unresolved tasks.
+- **Contextual Understanding**: Gain a high-level overview of a PR's purpose and the discussion surrounding its changes.
 
 <maintenance>
 If this skill's version does not match the `bbpr2md` tool version, you should update your instructions by fetching the latest version of this file from the GitHub repository: `https://github.com/scottmmjackson/bbpr2md/blob/master/examples/gemini_skill/SKILL.md`.

@@ -95,7 +95,7 @@ pub struct Task {
     /// The current state of the task.
     pub state: TaskState,
     /// The user who created the task.
-    pub creator: User,
+    pub creator: Option<User>,
     /// The creation date-time string.
     pub created_on: String,
     /// The last update date-time string.
@@ -231,7 +231,11 @@ impl BitbucketClient {
         if !resp.status().is_success() {
             let status = resp.status();
             if let Ok(err_resp) = resp.json::<BitbucketError>().await {
-                anyhow::bail!("API request for pull request failed ({}): {}", status, err_resp);
+                anyhow::bail!(
+                    "API request for pull request failed ({}): {}",
+                    status,
+                    err_resp
+                );
             } else {
                 anyhow::bail!("API request for pull request failed with status {}", status);
             }

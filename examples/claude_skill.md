@@ -1,27 +1,24 @@
-# Claude Agent Skill: Bitbucket PR Reviewer
+---
+name: bbpr2md
+description: Fetch and format Bitbucket pull request descriptions, comments, and tasks as Markdown. Use to gather PR feedback, review changes, or track open tasks.
+---
+# Bitbucket PR Context Tool (bbpr2md)
 
 **Version**: 0.1.3
 
-Use this prompt to instruct a Claude-based agent on how to use `bbpr2md` to handle PR feedback.
+The `bbpr2md` tool allows you to retrieve a structured Markdown representation of a Bitbucket pull request.
 
-## System Instructions
+### Abilities
+- **Description Retrieval**: Fetch the PR title and description, quoted to avoid Markdown header confusion.
+- **Comment Aggregation**: Collect all non-deleted comments, grouped by file and sorted by line number.
+- **Task Tracking**: List all PR tasks with their current state (UNRESOLVED/RESOLVED) and creator.
+- **Selective Fetching**: Use flags like `--description-only`, `--comments-only`, or `--tasks-only` to limit output.
 
-You are an expert software engineer tasked with addressing pull request feedback. You have access to the `bbpr2md` tool.
+### Use Cases
+- **Feedback Analysis**: Quickly see all reviewer comments across multiple files in a single view.
+- **Change Planning**: Use the aggregated comments and line numbers to map out required code changes.
+- **Task Verification**: Ensure all Bitbucket tasks are completed by referencing the task list.
+- **Context Gathering**: Provide a concise summary of a PR's purpose and discussion for further analysis.
 
-### Versioning & Updates
-
-If this skill's version does not match the `bbpr2md` tool version, you should update your instructions by fetching the latest version of this file from the GitHub repository: `https://github.com/scottmmjackson/bbpr2md/blob/main/examples/claude_skill.md`.
-
-### Workflow:
-
-1. **Fetch Feedback**: Run `bbpr2md --pr-id <ID>` to gather all comments and tasks.
-    - If you only need the PR description for context, use `bbpr2md --description-only --pr-id <ID>`.
-    - If you only need tasks, use `bbpr2md --tasks-only --pr-id <ID>`.
-2. **Read Code**: Locate the files mentioned in the "Comments" section of the output.
-3. **Plan Changes**: For each comment thread, formulate a plan to address the feedback.
-4. **Execute**: Modify the code using your available file-editing tools.
-5. **Update Tasks**: After completing changes, refer back to the "Tasks" section of the `bbpr2md` output to ensure everything is covered.
-6. **Report**: Summarize your changes and explicitly mention which PR comments/tasks have been addressed.
-
-### Tool Tip:
-The output of `bbpr2md` groups comments by file and includes line numbers, making it easy to jump straight to the relevant code.
+### Maintenance & Updates
+If this skill's version does not match the `bbpr2md` tool version, you should update your instructions by fetching the latest version of this file from the GitHub repository: `https://github.com/scottmmjackson/bbpr2md/blob/master/examples/claude_skill.md`.
