@@ -58,6 +58,7 @@ The primary goal of `bbpr2md` is to simplify the feedback loop between code revi
 -   `--comments-only`: Include only the comments.
 -   `--tasks-only`: Include only the tasks.
 -   `--comments-and-tasks`: Include only comments and tasks (exclude description).
+-   `--comment <ID_OR_URL>`: Show only the thread containing a specific comment. Accepts a raw comment ID (e.g. `789186489`) or a full Bitbucket comment URL (e.g. `https://bitbucket.org/org/repo/pull-requests/1379#comment-789186489`).
 
 ## Environment Variables
 

@@ -26,6 +26,7 @@ A Rust CLI tool that fetches comments and tasks from a Bitbucket pull request an
     - **Description Inclusion**: The PR title and description are included by default to provide top-level context.
     - **Markdown Quoting**: The PR description (which may contain its own Markdown headers) is quoted using blockquotes (`> `). This prevents AI agents from confusing description subheadings with the main report's structure.
     - **Granular Control**: CLI flags (`--description-only`, `--comments-only`, `--tasks-only`, `--comments-and-tasks`) allow agents to fetch only the specific context they need, reducing token usage.
+    - **Single Thread**: `--comment <ID_OR_URL>` fetches all comments and filters to the thread containing the specified comment (root + all replies). Accepts a raw integer ID or a full Bitbucket comment URL with a `#comment-<id>` fragment.
 - **Configuration Management**:
     - Uses the `confy` crate. The application name is `bbpr2md`.
     - Default config path can be found via `bbpr2md --init`.

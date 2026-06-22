@@ -4,7 +4,7 @@ use serde::Deserialize;
 
 /// Represents a Bitbucket user.
 #[allow(dead_code)]
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 pub struct User {
     /// The user's display name.
     pub display_name: String,
@@ -14,7 +14,7 @@ pub struct User {
 
 /// Represents the content of a comment or task.
 #[allow(dead_code)]
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 pub struct Content {
     /// The raw markdown content.
     pub raw: String,
@@ -24,7 +24,7 @@ pub struct Content {
 
 /// Represents inline location information for a comment.
 #[allow(dead_code)]
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 pub struct Inline {
     /// The file path.
     pub path: String,
@@ -55,7 +55,7 @@ impl std::fmt::Display for TaskState {
 
 /// Represents a pull request comment.
 #[allow(dead_code)]
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 pub struct Comment {
     /// The comment ID.
     pub id: u64,
@@ -78,7 +78,7 @@ pub struct Comment {
 
 /// Represents a link to a parent comment.
 #[allow(dead_code)]
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 pub struct CommentParent {
     /// The parent comment ID.
     pub id: u64,
