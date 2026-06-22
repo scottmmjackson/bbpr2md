@@ -12,7 +12,6 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::env;
 use std::fs;
-use std::path::Path;
 use std::process::Command;
 
 /// Configuration for bbpr2md.
@@ -458,10 +457,16 @@ async fn main() -> Result<()> {
 }
 
 fn install_skill(agent: &str, global: bool, yes: bool) -> Result<()> {
-    let (source_file, skill_name, sub_dir) = match agent {
-        "Claude" => ("examples/claude_skill.md", "bbpr2md", ".claude/skills"),
+    // Skill contents are embedded at compile time so the binary works without
+    // the source tree present (e.g. when installed via Homebrew).
+    let (content, skill_name, sub_dir) = match agent {
+        "Claude" => (
+            include_str!("../examples/claude_skill.md"),
+            "bbpr2md",
+            ".claude/skills",
+        ),
         "Gemini" => (
-            "examples/gemini_skill/SKILL.md",
+            include_str!("../examples/gemini_skill/SKILL.md"),
             "bbpr2md-bitbucket-pull-request-describer",
             ".gemini/skills",
         ),
@@ -495,16 +500,8 @@ fn install_skill(agent: &str, global: bool, yes: bool) -> Result<()> {
         ))?;
     }
 
-    let source_path = Path::new(source_file);
-    if !source_path.exists() {
-        // If we are running from a binary, we might not have the source file locally.
-        // For now, assume it exists since it's a local development tool.
-        anyhow::bail!("Source skill file not found at: {}", source_file);
-    }
-
-    fs::copy(source_path, &target_file).context(format!(
-        "Failed to copy {} to {}",
-        source_file,
+    fs::write(&target_file, content).context(format!(
+        "Failed to write skill to {}",
         target_file.display()
     ))?;
 

@@ -48,6 +48,7 @@ A Rust CLI tool that fetches comments and tasks from a Bitbucket pull request an
     - **Gemini**: Gemini skills are installed at `.gemini/skills/<skill name>/SKILL.md`. They also require a YAML
       frontmatter with keys "name" and "description". See 
       [Gemini documentation for more information](https://geminicli.com/docs/cli/creating-skills/)
+    - **Embedding**: Skill file contents are embedded into the binary at compile time via `include_str!`. Do **not** use `fs::copy` from a relative path — that breaks when installed via Homebrew or any package manager where the source tree is absent. Always use `fs::write` with the embedded `&'static str`.
 
 ### Coding Standards
 

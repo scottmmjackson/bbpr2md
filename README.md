@@ -47,6 +47,35 @@ bbpr2md            # auto-detect PR from current branch
 bbpr2md --pr-id 123  # or specify explicitly
 ```
 
+## AI Agent Skill Installation
+
+`bbpr2md` can install a native skill into Claude or Gemini CLI so those agents know how to use the tool automatically. The skill content is embedded in the binary, so this works from any install method (Homebrew, direct download, etc.).
+
+### Claude
+
+```bash
+# Install into the current project's .claude/skills/
+bbpr2md skill claude
+
+# Install globally into ~/.claude/skills/
+bbpr2md skill claude --global
+
+# Skip the confirmation prompt
+bbpr2md skill claude --global --yes
+```
+
+### Gemini CLI
+
+```bash
+# Install into the current project's .gemini/skills/
+bbpr2md skill gemini
+
+# Install globally into ~/.gemini/skills/
+bbpr2md skill gemini --global --yes
+```
+
+Once installed, the agent will automatically know how to invoke `bbpr2md` to gather PR context.
+
 ## AI Agent Workflow
 
 The primary goal of `bbpr2md` is to simplify the feedback loop between code review and implementation.
@@ -85,10 +114,9 @@ You can also use environment variables, which override the config file but are o
 
 ## Examples
 
-Check the [examples/](./examples) directory for:
+The [examples/](./examples) directory contains:
 -   `config.toml`: A sample configuration file.
--   `claude_skill.md`: A system prompt for Claude to use this tool effectively.
--   `gemini_skill/SKILL.md`: A native Gemini CLI skill definition.
+-   `claude_skill.md` / `gemini_skill/SKILL.md`: The skill definitions (use `bbpr2md skill` to install these rather than copying manually).
 
 ## Development
 

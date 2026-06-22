@@ -4,7 +4,7 @@ description: Knowledge of gathering information about Bitbucket pull requests us
 ---
 # Bitbucket PR Context Skill
 
-**Version**: 0.1.7
+**Version**: 0.1.8
 
 This skill allows Gemini CLI to efficiently gather and address pull request feedback using the `bbpr2md` tool.
 

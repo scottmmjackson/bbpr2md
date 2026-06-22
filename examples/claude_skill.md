@@ -4,7 +4,7 @@ description: Fetch and format Bitbucket pull request descriptions, comments, and
 ---
 # Bitbucket PR Context Tool (bbpr2md)
 
-**Version**: 0.1.7
+**Version**: 0.1.8
 
 The `bbpr2md` tool allows you to retrieve a structured Markdown representation of a Bitbucket pull request.
 
