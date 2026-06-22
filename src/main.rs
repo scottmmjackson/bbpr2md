@@ -13,6 +13,7 @@ use std::collections::HashMap;
 use std::env;
 use std::fs;
 use std::path::Path;
+use std::process::Command;
 
 /// Configuration for bbpr2md.
 #[derive(Serialize, Deserialize, Debug, Default)]
@@ -67,6 +68,10 @@ struct Args {
     /// Bitbucket Personal Access Token (Bearer token).
     #[arg(long)]
     token: Option<String>,
+
+    /// Git remote name used to derive workspace and repo slug when not explicitly provided.
+    #[arg(long, default_value = "origin")]
+    remote: String,
 
     /// Print debug information (e.g., request headers).
     #[arg(long)]
@@ -126,6 +131,70 @@ enum SkillSubcommand {
         #[arg(short, long)]
         yes: bool,
     },
+}
+
+/// Returns the URL for the named git remote in the current directory.
+fn get_git_remote_url(remote: &str) -> Result<String> {
+    let out = Command::new("git")
+        .args(["remote", "get-url", remote])
+        .output()
+        .context("Failed to run git")?;
+    if !out.status.success() {
+        anyhow::bail!(
+            "git remote get-url {} failed: {}",
+            remote,
+            String::from_utf8_lossy(&out.stderr).trim()
+        );
+    }
+    Ok(String::from_utf8_lossy(&out.stdout).trim().to_string())
+}
+
+/// Parses a Bitbucket remote URL into `(workspace, repo_slug)`.
+///
+/// Handles:
+/// - SSH:   `git@bitbucket.org:workspace/repo.git`
+/// - HTTPS: `https://[user@]bitbucket.org/workspace/repo.git`
+fn parse_bitbucket_remote(url: &str) -> Option<(String, String)> {
+    let path = if let Some(rest) = url.strip_prefix("git@bitbucket.org:") {
+        rest
+    } else {
+        let without_scheme = url
+            .strip_prefix("https://")
+            .or_else(|| url.strip_prefix("http://"))?;
+        // Strip optional user@ prefix
+        let host_and_path = if let Some(at) = without_scheme.find('@') {
+            &without_scheme[at + 1..]
+        } else {
+            without_scheme
+        };
+        host_and_path.strip_prefix("bitbucket.org/")?
+    };
+
+    let path = path.trim_end_matches(".git");
+    let (workspace, repo) = path.split_once('/')?;
+    if workspace.is_empty() || repo.is_empty() {
+        return None;
+    }
+    Some((workspace.to_string(), repo.to_string()))
+}
+
+/// Returns the name of the currently checked-out branch.
+fn get_current_branch() -> Result<String> {
+    let out = Command::new("git")
+        .args(["branch", "--show-current"])
+        .output()
+        .context("Failed to run git")?;
+    if !out.status.success() {
+        anyhow::bail!(
+            "git branch --show-current failed: {}",
+            String::from_utf8_lossy(&out.stderr).trim()
+        );
+    }
+    let branch = String::from_utf8_lossy(&out.stdout).trim().to_string();
+    if branch.is_empty() {
+        anyhow::bail!("Could not determine current branch (detached HEAD?)");
+    }
+    Ok(branch)
 }
 
 /// Parses a comment ID from either a raw integer string or a Bitbucket comment URL.
@@ -232,17 +301,29 @@ async fn main() -> Result<()> {
     // Load configuration from the standard location.
     let cfg: Config = confy::load("bbpr2md", None).context("Failed to load configuration")?;
 
-    // Resolve workspace.
+    // Try to parse workspace/repo_slug from the git remote if either is missing.
+    let git_remote_info: Option<(String, String)> =
+        if args.workspace.is_none() || args.repo_slug.is_none() {
+            get_git_remote_url(&args.remote)
+                .ok()
+                .and_then(|url| parse_bitbucket_remote(&url))
+        } else {
+            None
+        };
+
+    // Resolve workspace: CLI > config > git remote.
     let workspace = args
         .workspace
         .or(cfg.workspace)
-        .context("Workspace must be provided via CLI, config file, or environment")?;
+        .or_else(|| git_remote_info.as_ref().map(|(ws, _)| ws.clone()))
+        .context("Workspace must be provided via --workspace, config file, or git remote")?;
 
-    // Resolve repo slug.
+    // Resolve repo slug: CLI > config > git remote.
     let repo_slug = args
         .repo_slug
         .or(cfg.repo_slug)
-        .context("Repository slug must be provided via CLI, config file, or environment")?;
+        .or_else(|| git_remote_info.as_ref().map(|(_, rs)| rs.clone()))
+        .context("Repository slug must be provided via --repo-slug, config file, or git remote")?;
 
     // Resolve username (CLI > Env > Config).
     let username = args
@@ -269,7 +350,44 @@ async fn main() -> Result<()> {
         anyhow::bail!("Bitbucket credentials must be set (either BITBUCKET_TOKEN/config.token or BITBUCKET_USERNAME+BITBUCKET_APP_PASSWORD/config.username+config.app_password)");
     }
 
-    let pr_id = args.pr_id.context("Pull request ID must be provided")?;
+    // Resolve PR ID: CLI arg > derive from current branch.
+    let pr_id = match args.pr_id {
+        Some(id) => id,
+        None => {
+            let branch = get_current_branch()
+                .context("--pr-id not provided and could not determine current branch")?;
+            eprintln!(
+                "No --pr-id provided; searching for open PR from branch '{}'...",
+                branch
+            );
+            let client_tmp = BitbucketClient::new(username.clone(), password.clone(), token.clone(), args.debug);
+            let prs = client_tmp
+                .find_open_prs_for_branch(&workspace, &repo_slug, &branch)
+                .await
+                .context("Failed to search for open PRs")?;
+            match prs.len() {
+                0 => anyhow::bail!(
+                    "No open PR found for branch '{}' in {}/{}",
+                    branch,
+                    workspace,
+                    repo_slug
+                ),
+                1 => {
+                    let pr = &prs[0];
+                    eprintln!("Found PR #{}: {}", pr.id, pr.title);
+                    pr.id
+                }
+                _ => {
+                    let ids: Vec<String> = prs.iter().map(|p| format!("#{}", p.id)).collect();
+                    anyhow::bail!(
+                        "Multiple open PRs found for branch '{}': {}. Use --pr-id to specify one.",
+                        branch,
+                        ids.join(", ")
+                    )
+                }
+            }
+        }
+    };
 
     let comment_id = args
         .comment
@@ -402,6 +520,44 @@ fn install_skill(agent: &str, global: bool, yes: bool) -> Result<()> {
 mod tests {
     use super::*;
     use crate::client::{Comment, CommentParent, Content, User};
+
+    #[test]
+    fn test_parse_bitbucket_remote_ssh() {
+        let (ws, repo) =
+            parse_bitbucket_remote("git@bitbucket.org:myworkspace/my-repo.git").unwrap();
+        assert_eq!(ws, "myworkspace");
+        assert_eq!(repo, "my-repo");
+    }
+
+    #[test]
+    fn test_parse_bitbucket_remote_https() {
+        let (ws, repo) =
+            parse_bitbucket_remote("https://bitbucket.org/myworkspace/my-repo.git").unwrap();
+        assert_eq!(ws, "myworkspace");
+        assert_eq!(repo, "my-repo");
+    }
+
+    #[test]
+    fn test_parse_bitbucket_remote_https_with_user() {
+        let (ws, repo) =
+            parse_bitbucket_remote("https://user@bitbucket.org/myworkspace/my-repo.git").unwrap();
+        assert_eq!(ws, "myworkspace");
+        assert_eq!(repo, "my-repo");
+    }
+
+    #[test]
+    fn test_parse_bitbucket_remote_no_dot_git() {
+        let (ws, repo) =
+            parse_bitbucket_remote("https://bitbucket.org/myworkspace/my-repo").unwrap();
+        assert_eq!(ws, "myworkspace");
+        assert_eq!(repo, "my-repo");
+    }
+
+    #[test]
+    fn test_parse_bitbucket_remote_invalid() {
+        assert!(parse_bitbucket_remote("https://github.com/user/repo.git").is_none());
+        assert!(parse_bitbucket_remote("not-a-url").is_none());
+    }
 
     fn mock_comment(id: u64, parent_id: Option<u64>) -> Comment {
         Comment {

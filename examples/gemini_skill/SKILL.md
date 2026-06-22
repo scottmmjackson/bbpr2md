@@ -4,15 +4,42 @@ description: Knowledge of gathering information about Bitbucket pull requests us
 ---
 # Bitbucket PR Context Skill
 
-**Version**: 0.1.3
+**Version**: 0.1.7
 
 This skill allows Gemini CLI to efficiently gather and address pull request feedback using the `bbpr2md` tool.
 
 ### Abilities
+- **Zero-Config PR Detection**: When run inside a git repository whose `origin` remote points to Bitbucket, `bbpr2md` automatically derives the workspace, repo slug, and PR ID from the git remote and current branch — no flags required.
 - **Comprehensive Feedback Retrieval**: Fetches the PR title, description, all non-deleted comments, and tasks in a single command.
 - **Context Preservation**: Quotes the PR description to prevent Markdown header confusion for AI agents.
 - **Granular Control**: Supports flags like `--description-only`, `--comments-only`, and `--tasks-only` for targeted information retrieval.
 - **Organized Comments**: Groups comments by file and provides line number information.
+- **Single Thread**: `--comment <ID_OR_URL>` fetches only the thread containing a specific comment.
+
+### Usage
+
+Minimal invocation (inside a git repo on a branch with an open PR):
+```
+bbpr2md
+```
+
+With an explicit PR ID:
+```
+bbpr2md --pr-id 123
+```
+
+With a non-default remote:
+```
+bbpr2md --remote upstream
+```
+
+### Key Flags
+- `--pr-id <ID>` — PR ID (auto-detected from current branch if omitted)
+- `--workspace <WS>` — Bitbucket workspace (auto-detected from git remote if omitted)
+- `--repo-slug <REPO>` — Repository slug (auto-detected from git remote if omitted)
+- `--remote <NAME>` — Git remote for auto-detection (default: `origin`)
+- `--description-only` / `--comments-only` / `--tasks-only` / `--comments-and-tasks`
+- `--comment <ID_OR_URL>` — Fetch only the thread for a specific comment
 
 ### Use Cases
 - **Review Resolution**: Quickly identify all areas in the codebase that require attention from reviewer comments.

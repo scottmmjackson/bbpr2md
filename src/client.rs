@@ -161,6 +161,29 @@ pub struct PullRequest {
     pub state: String,
 }
 
+/// Minimal pull request info returned when listing PRs.
+#[allow(dead_code)]
+#[derive(Debug, Deserialize)]
+pub struct PullRequestBrief {
+    pub id: u32,
+    pub title: String,
+}
+
+/// Percent-encodes characters in `s` that are not URL-safe path characters.
+/// Leaves `A-Z a-z 0-9 - _ . ~` unencoded.
+fn percent_encode_path(s: &str) -> String {
+    let mut out = String::with_capacity(s.len());
+    for b in s.bytes() {
+        match b {
+            b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'-' | b'_' | b'.' | b'~' => {
+                out.push(b as char)
+            }
+            _ => out.push_str(&format!("%{:02X}", b)),
+        }
+    }
+    out
+}
+
 /// A client for interacting with the Bitbucket API.
 pub struct BitbucketClient {
     client: Client,
@@ -299,6 +322,68 @@ impl BitbucketClient {
         }
 
         Ok(comments)
+    }
+
+    /// Finds open pull requests whose source branch matches `branch`.
+    pub async fn find_open_prs_for_branch(
+        &self,
+        workspace: &str,
+        repo_slug: &str,
+        branch: &str,
+    ) -> Result<Vec<PullRequestBrief>> {
+        // Percent-encode the q filter value.  Double-quotes and spaces are the
+        // only characters the filter expression itself introduces; the branch
+        // name is validated by git and cannot contain '"'.
+        let q_encoded = format!(
+            "source.branch.name%3D%22{}%22%20AND%20state%3D%22OPEN%22",
+            percent_encode_path(branch)
+        );
+
+        let mut prs = Vec::new();
+        let mut page: u32 = 1;
+
+        loop {
+            let url = format!(
+                "{}/repositories/{}/{}/pullrequests?q={}&pagelen=50&page={}",
+                self.base_url, workspace, repo_slug, q_encoded, page
+            );
+
+            let req_builder = self.auth_request(self.client.get(&url));
+
+            if self.debug {
+                eprintln!("GET {}", url);
+            }
+
+            let resp = req_builder
+                .send()
+                .await
+                .context("Failed to send request for PR listing")?;
+
+            if !resp.status().is_success() {
+                let status = resp.status();
+                if let Ok(err_resp) = resp.json::<BitbucketError>().await {
+                    anyhow::bail!("API request for PR listing failed ({}): {}", status, err_resp);
+                } else {
+                    anyhow::bail!("API request for PR listing failed with status {}", status);
+                }
+            }
+
+            let resp_json = resp
+                .json::<PaginatedResponse<PullRequestBrief>>()
+                .await
+                .context("Failed to parse PR listing response")?;
+
+            let has_next = resp_json.next.is_some();
+            prs.extend(resp_json.values);
+
+            if has_next {
+                page += 1;
+            } else {
+                break;
+            }
+        }
+
+        Ok(prs)
     }
 
     /// Fetches all tasks for a given pull request, handling pagination.

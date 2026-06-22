@@ -2,34 +2,49 @@
 
 `bbpr2md` is a Rust CLI tool designed to fetch pull request comments and tasks from Bitbucket Cloud and format them into a clean Markdown document. This is primarily used as high-quality context for AI agents (like Claude or Gemini) to understand and address PR feedback.
 
-## Preferred Use Case: Configuration Flow
+## Zero-Config Usage (Git Remote Auto-Detection)
 
-The recommended way to use `bbpr2md` is through a persistent configuration file. This avoids passing common arguments (like workspace and repo) every time.
+If your current directory is a git repository whose `origin` remote points to Bitbucket, `bbpr2md` can derive everything it needs automatically:
+
+```bash
+# On a branch that has an open PR — no flags required
+bbpr2md
+```
+
+It will:
+1. Parse `workspace` and `repo_slug` from `git remote get-url origin`
+2. Read the current branch via `git branch --show-current`
+3. Query the Bitbucket API for an open PR from that branch
+
+Use `--remote <name>` to specify a different remote than `origin`.
+
+You still need to supply credentials (see [Authentication](#authentication) below).
+
+## Configuration File Flow
+
+For repositories you access frequently, a config file avoids repeating credentials and defaults.
 
 ### 1. Initialize Configuration
-Run the following command to create a default configuration file in your system's standard location:
-
 ```bash
 bbpr2md --init
 ```
 
-The command will print the path to the created file (e.g., `~/.config/bbpr2md/default-config.toml`).
+The command prints the path to the created file (e.g., `~/.config/bbpr2md/default-config.toml`).
 
 ### 2. Configure Defaults
-Edit the created file to set your default values:
-
 ```toml
 username = "your.email@example.com"
 token = "your-bitbucket-personal-access-token"
-workspace = "your-workspace"
-repo_slug = "your-repo"
+workspace = "your-workspace"   # optional if using git remote auto-detection
+repo_slug = "your-repo"        # optional if using git remote auto-detection
 ```
 
 ### 3. Usage
-Once configured, you only need to provide the PR ID:
+With a config file, credentials are handled automatically and the PR is still auto-detected:
 
 ```bash
-bbpr2md --pr-id 123
+bbpr2md            # auto-detect PR from current branch
+bbpr2md --pr-id 123  # or specify explicitly
 ```
 
 ## AI Agent Workflow
@@ -37,7 +52,7 @@ bbpr2md --pr-id 123
 The primary goal of `bbpr2md` is to simplify the feedback loop between code review and implementation.
 
 ### The Agent Cycle
-1.  **Gather Context**: An AI agent runs `bbpr2md --pr-id <ID>` to retrieve all comments and tasks.
+1.  **Gather Context**: An AI agent runs `bbpr2md` (or `bbpr2md --pr-id <ID>`) to retrieve all comments and tasks.
 2.  **Analyze**: The agent parses the Markdown to identify requested changes, grouped by file and line.
 3.  **Implement**: The agent applies the changes to the codebase.
 4.  **Verify**: The agent uses the tasks list to ensure all items are addressed before marking them as resolved.
@@ -46,9 +61,10 @@ The primary goal of `bbpr2md` is to simplify the feedback loop between code revi
 
 `bbpr2md` supports overrides for all configuration values via CLI flags:
 
--   `--pr-id <ID>`: (Required) The ID of the pull request.
--   `--workspace <WS>`: Bitbucket workspace ID.
--   `--repo-slug <REPO>`: Repository slug.
+-   `--pr-id <ID>`: The pull request ID. If omitted, auto-detected from the current branch (see [Zero-Config Usage](#zero-config-usage-git-remote-auto-detection)).
+-   `--workspace <WS>`: Bitbucket workspace ID. If omitted, parsed from the git remote URL.
+-   `--repo-slug <REPO>`: Repository slug. If omitted, parsed from the git remote URL.
+-   `--remote <NAME>`: Git remote to use for URL parsing (default: `origin`).
 -   `--username <USER>`: Bitbucket username/email.
 -   `--token <TOKEN>`: Personal Access Token (Bearer Auth).
 -   `--app-password <PW>`: App Password (Basic Auth).

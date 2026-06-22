@@ -4,15 +4,42 @@ description: Fetch and format Bitbucket pull request descriptions, comments, and
 ---
 # Bitbucket PR Context Tool (bbpr2md)
 
-**Version**: 0.1.3
+**Version**: 0.1.7
 
 The `bbpr2md` tool allows you to retrieve a structured Markdown representation of a Bitbucket pull request.
 
 ### Abilities
+- **Zero-Config PR Detection**: When run inside a git repository whose `origin` remote points to Bitbucket, `bbpr2md` automatically derives the workspace, repo slug, and PR ID — no flags needed on a branch with an open PR.
 - **Description Retrieval**: Fetch the PR title and description, quoted to avoid Markdown header confusion.
 - **Comment Aggregation**: Collect all non-deleted comments, grouped by file and sorted by line number.
 - **Task Tracking**: List all PR tasks with their current state (UNRESOLVED/RESOLVED) and creator.
 - **Selective Fetching**: Use flags like `--description-only`, `--comments-only`, or `--tasks-only` to limit output.
+- **Single Thread**: Use `--comment <ID_OR_URL>` to fetch only the thread containing a specific comment.
+
+### Usage
+
+Minimal invocation (inside a git repo on a branch with an open PR):
+```
+bbpr2md
+```
+
+With an explicit PR ID:
+```
+bbpr2md --pr-id 123
+```
+
+With a non-default remote:
+```
+bbpr2md --remote upstream
+```
+
+### Key Flags
+- `--pr-id <ID>` — PR ID (auto-detected from current branch if omitted)
+- `--workspace <WS>` — Bitbucket workspace (auto-detected from git remote if omitted)
+- `--repo-slug <REPO>` — Repository slug (auto-detected from git remote if omitted)
+- `--remote <NAME>` — Git remote to use for auto-detection (default: `origin`)
+- `--description-only` / `--comments-only` / `--tasks-only` / `--comments-and-tasks`
+- `--comment <ID_OR_URL>` — Fetch only the thread containing a specific comment
 
 ### Use Cases
 - **Feedback Analysis**: Quickly see all reviewer comments across multiple files in a single view.

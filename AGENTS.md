@@ -22,6 +22,11 @@ A Rust CLI tool that fetches comments and tasks from a Bitbucket pull request an
     - **Null Creators**: Some tasks (e.g., system-generated or from deleted users) may have a `null` creator. The `creator` field in `Task` is optional, and the formatter defaults to "Unknown".
     - **Comment Threads**: Comments are flattened in the API response. Threading is reconstructed by checking the `parent` field. In Markdown, replies are indented using blockquotes (`> `) to maintain visual hierarchy.
     - **Deleted Comments**: The formatter filters out comments where `deleted: true` to keep the context clean for AI agents.
+- **Git Remote Auto-Detection**:
+    - If `--workspace` or `--repo-slug` are omitted, the tool runs `git remote get-url <remote>` (default remote: `origin`) and parses the Bitbucket SSH (`git@bitbucket.org:ws/repo.git`) or HTTPS (`https://[user@]bitbucket.org/ws/repo.git`) URL to derive both values.
+    - If `--pr-id` is omitted, the tool reads the current branch via `git branch --show-current`, then queries `GET /repositories/{ws}/{repo}/pullrequests` with a filter `source.branch.name="<branch>" AND state="OPEN"` to find the matching PR. Exactly one result is required; zero or multiple are errors.
+    - The `--remote` flag overrides the default `origin` remote name used for URL parsing.
+    - The Bitbucket API `q` filter parameter requires percent-encoding inside query strings; `=` → `%3D`, `"` → `%22`, space → `%20`. The `percent_encode_path` helper in `client.rs` handles encoding of branch names embedded in the filter.
 - **PR Descriptions & Section Filtering**:
     - **Description Inclusion**: The PR title and description are included by default to provide top-level context.
     - **Markdown Quoting**: The PR description (which may contain its own Markdown headers) is quoted using blockquotes (`> `). This prevents AI agents from confusing description subheadings with the main report's structure.
