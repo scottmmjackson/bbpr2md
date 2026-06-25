@@ -97,6 +97,16 @@ struct Args {
     /// (e.g. https://bitbucket.org/org/repo/pull-requests/1#comment-789186489).
     #[arg(long, conflicts_with_all = ["description_only", "comments_only", "tasks_only", "comments_and_tasks"])]
     comment: Option<String>,
+
+    /// List all unique users who have commented on this pull request.
+    /// Outputs one user per line in the form "Display Name (account_id)".
+    #[arg(long, conflicts_with_all = ["description_only", "tasks_only", "comments_and_tasks", "author"])]
+    list_users: bool,
+
+    /// Show only comments authored by this user.
+    /// Matches against display name or account ID (case-insensitive).
+    #[arg(long, conflicts_with_all = ["list_users"])]
+    author: Option<String>,
 }
 
 #[derive(Subcommand, Debug)]
@@ -396,7 +406,9 @@ async fn main() -> Result<()> {
 
     let client = BitbucketClient::new(username, password, token, args.debug);
 
-    let (include_description, include_comments, include_tasks) = if comment_id.is_some() {
+    let (include_description, include_comments, include_tasks) = if args.list_users {
+        (false, true, false)
+    } else if comment_id.is_some() {
         (false, true, false)
     } else if args.description_only {
         (true, false, false)
@@ -435,6 +447,46 @@ async fn main() -> Result<()> {
     } else {
         Vec::new()
     };
+
+    // Apply --author filter: keep only comments from the specified user.
+    let comments = if let Some(ref author) = args.author {
+        let author_lower = author.to_lowercase();
+        comments
+            .into_iter()
+            .filter(|c| {
+                c.user.display_name.to_lowercase() == author_lower
+                    || c.user.account_id.to_lowercase() == author_lower
+            })
+            .collect()
+    } else {
+        comments
+    };
+
+    // Handle --list-users: print unique commenters and exit.
+    if args.list_users {
+        let mut seen: std::collections::HashSet<String> = std::collections::HashSet::new();
+        let mut users: Vec<(String, String)> = Vec::new();
+        for comment in &comments {
+            if !comment.deleted && !seen.contains(&comment.user.account_id) {
+                seen.insert(comment.user.account_id.clone());
+                users.push((comment.user.display_name.clone(), comment.user.account_id.clone()));
+            }
+        }
+        users.sort_by(|a, b| a.0.cmp(&b.0));
+        let content: String = users
+            .iter()
+            .map(|(name, id)| format!("{} ({})", name, id))
+            .collect::<Vec<_>>()
+            .join("\n");
+        if let Some(output_path) = args.output {
+            fs::write(&output_path, &content)
+                .context(format!("Failed to write to file: {}", output_path))?;
+            eprintln!("User list saved to: {}", output_path);
+        } else {
+            println!("{}", content);
+        }
+        return Ok(());
+    }
 
     let tasks = if include_tasks {
         eprintln!("Fetching tasks for PR #{}...", pr_id);
@@ -557,6 +609,10 @@ mod tests {
     }
 
     fn mock_comment(id: u64, parent_id: Option<u64>) -> Comment {
+        mock_comment_with_user(id, parent_id, "Tester", "t")
+    }
+
+    fn mock_comment_with_user(id: u64, parent_id: Option<u64>, display_name: &str, account_id: &str) -> Comment {
         Comment {
             id,
             content: Content {
@@ -564,8 +620,8 @@ mod tests {
                 html: None,
             },
             user: User {
-                display_name: "Tester".to_string(),
-                account_id: "t".to_string(),
+                display_name: display_name.to_string(),
+                account_id: account_id.to_string(),
             },
             created_on: "2024-01-01T00:00:00Z".to_string(),
             updated_on: None,
@@ -573,6 +629,80 @@ mod tests {
             parent: parent_id.map(|pid| CommentParent { id: pid }),
             deleted: false,
         }
+    }
+
+    fn filter_by_author(comments: &[Comment], author: &str) -> Vec<Comment> {
+        let author_lower = author.to_lowercase();
+        comments
+            .iter()
+            .filter(|c| {
+                c.user.display_name.to_lowercase() == author_lower
+                    || c.user.account_id.to_lowercase() == author_lower
+            })
+            .cloned()
+            .collect()
+    }
+
+    #[test]
+    fn test_filter_by_author_display_name() {
+        let comments = vec![
+            mock_comment_with_user(1, None, "Alice", "acc-alice"),
+            mock_comment_with_user(2, None, "Bob", "acc-bob"),
+            mock_comment_with_user(3, Some(1), "Alice", "acc-alice"),
+        ];
+        let filtered = filter_by_author(&comments, "alice");
+        let ids: Vec<u64> = filtered.iter().map(|c| c.id).collect();
+        assert_eq!(ids, vec![1, 3]);
+    }
+
+    #[test]
+    fn test_filter_by_author_account_id() {
+        let comments = vec![
+            mock_comment_with_user(1, None, "Alice", "acc-alice"),
+            mock_comment_with_user(2, None, "Bob", "acc-bob"),
+        ];
+        let filtered = filter_by_author(&comments, "acc-bob");
+        let ids: Vec<u64> = filtered.iter().map(|c| c.id).collect();
+        assert_eq!(ids, vec![2]);
+    }
+
+    #[test]
+    fn test_filter_by_author_case_insensitive() {
+        let comments = vec![
+            mock_comment_with_user(1, None, "Alice Smith", "acc-alice"),
+            mock_comment_with_user(2, None, "Bob", "acc-bob"),
+        ];
+        let filtered = filter_by_author(&comments, "ALICE SMITH");
+        let ids: Vec<u64> = filtered.iter().map(|c| c.id).collect();
+        assert_eq!(ids, vec![1]);
+    }
+
+    #[test]
+    fn test_filter_by_author_no_match() {
+        let comments = vec![mock_comment_with_user(1, None, "Alice", "acc-alice")];
+        let filtered = filter_by_author(&comments, "Charlie");
+        assert!(filtered.is_empty());
+    }
+
+    #[test]
+    fn test_list_users_deduplication() {
+        let comments = vec![
+            mock_comment_with_user(1, None, "Alice", "acc-alice"),
+            mock_comment_with_user(2, None, "Bob", "acc-bob"),
+            mock_comment_with_user(3, Some(1), "Alice", "acc-alice"),
+        ];
+        let mut seen = std::collections::HashSet::new();
+        let mut users: Vec<(String, String)> = Vec::new();
+        for c in &comments {
+            if !c.deleted && !seen.contains(&c.user.account_id) {
+                seen.insert(c.user.account_id.clone());
+                users.push((c.user.display_name.clone(), c.user.account_id.clone()));
+            }
+        }
+        users.sort_by(|a, b| a.0.cmp(&b.0));
+        assert_eq!(users.len(), 2);
+        assert_eq!(users[0].0, "Alice");
+        assert_eq!(users[1].0, "Bob");
     }
 
     #[test]

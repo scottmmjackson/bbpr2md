@@ -4,7 +4,7 @@ description: Fetch and format Bitbucket pull request descriptions, comments, and
 ---
 # Bitbucket PR Context Tool (bbpr2md)
 
-**Version**: 0.1.8
+**Version**: 0.1.9
 
 The `bbpr2md` tool allows you to retrieve a structured Markdown representation of a Bitbucket pull request.
 
@@ -15,6 +15,8 @@ The `bbpr2md` tool allows you to retrieve a structured Markdown representation o
 - **Task Tracking**: List all PR tasks with their current state (UNRESOLVED/RESOLVED) and creator.
 - **Selective Fetching**: Use flags like `--description-only`, `--comments-only`, or `--tasks-only` to limit output.
 - **Single Thread**: Use `--comment <ID_OR_URL>` to fetch only the thread containing a specific comment.
+- **List Commenters**: Use `--list-users` to get a list of all unique users who commented on the PR.
+- **Author Filter**: Use `--author <USER>` to show only comments from a specific reviewer (matches display name or account ID).
 
 ### Usage
 
@@ -40,12 +42,15 @@ bbpr2md --remote upstream
 - `--remote <NAME>` — Git remote to use for auto-detection (default: `origin`)
 - `--description-only` / `--comments-only` / `--tasks-only` / `--comments-and-tasks`
 - `--comment <ID_OR_URL>` — Fetch only the thread containing a specific comment
+- `--list-users` — List all unique commenters (output: `Display Name (account_id)`, one per line)
+- `--author <USER>` — Filter output to comments from this user (display name or account ID, case-insensitive)
 
 ### Use Cases
 - **Feedback Analysis**: Quickly see all reviewer comments across multiple files in a single view.
 - **Change Planning**: Use the aggregated comments and line numbers to map out required code changes.
 - **Task Verification**: Ensure all Bitbucket tasks are completed by referencing the task list.
 - **Context Gathering**: Provide a concise summary of a PR's purpose and discussion for further analysis.
+- **Reviewer Discovery**: Run `--list-users` to find who has commented, then use their name with `--author` to focus on one reviewer's feedback at a time.
 
 ### Maintenance & Updates
 If this skill's version does not match the `bbpr2md` tool version, you should update your instructions by fetching the latest version of this file from the GitHub repository: `https://github.com/scottmmjackson/bbpr2md/blob/master/examples/claude_skill.md`.

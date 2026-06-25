@@ -104,6 +104,8 @@ The primary goal of `bbpr2md` is to simplify the feedback loop between code revi
 -   `--tasks-only`: Include only the tasks.
 -   `--comments-and-tasks`: Include only comments and tasks (exclude description).
 -   `--comment <ID_OR_URL>`: Show only the thread containing a specific comment. Accepts a raw comment ID (e.g. `789186489`) or a full Bitbucket comment URL (e.g. `https://bitbucket.org/org/repo/pull-requests/1379#comment-789186489`).
+-   `--list-users`: List all unique users who have commented on the pull request, one per line in the form `Display Name (account_id)`.
+-   `--author <USER>`: Show only comments authored by the given user. Matches against display name or account ID (case-insensitive). Works alongside `--comments-only`, `--comment`, and other flags.
 
 ## Environment Variables
 
