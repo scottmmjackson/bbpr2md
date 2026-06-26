@@ -107,6 +107,10 @@ struct Args {
     /// Matches against display name or account ID (case-insensitive).
     #[arg(long, conflicts_with_all = ["list_users"])]
     author: Option<String>,
+
+    /// Exclude comment threads that have been marked as resolved.
+    #[arg(long)]
+    hide_resolved: bool,
 }
 
 #[derive(Subcommand, Debug)]
@@ -271,6 +275,43 @@ fn collect_thread(comments: &[Comment], comment_id: u64) -> Result<Vec<Comment>>
     }
 
     Ok(result)
+}
+
+/// Removes all comments that belong to a resolved thread.
+///
+/// A thread is resolved when its root comment (the one with no parent) has
+/// `is_resolved()` returning true. All replies in that thread are also removed.
+fn filter_resolved_threads(comments: Vec<Comment>) -> Vec<Comment> {
+    let resolved_roots: std::collections::HashSet<u64> = comments
+        .iter()
+        .filter(|c| c.parent.is_none() && c.is_resolved())
+        .map(|c| c.id)
+        .collect();
+
+    if resolved_roots.is_empty() {
+        return comments;
+    }
+
+    let id_to_parent: HashMap<u64, u64> = comments
+        .iter()
+        .filter_map(|c| c.parent.as_ref().map(|p| (c.id, p.id)))
+        .collect();
+
+    comments
+        .into_iter()
+        .filter(|c| {
+            let mut current = c.id;
+            loop {
+                if resolved_roots.contains(&current) {
+                    return false;
+                }
+                match id_to_parent.get(&current) {
+                    Some(&parent_id) => current = parent_id,
+                    None => return true,
+                }
+            }
+        })
+        .collect()
 }
 
 #[tokio::main]
@@ -446,6 +487,13 @@ async fn main() -> Result<()> {
         }
     } else {
         Vec::new()
+    };
+
+    // Apply --hide-resolved: remove entire threads whose root is resolved.
+    let comments = if args.hide_resolved {
+        filter_resolved_threads(comments)
+    } else {
+        comments
     };
 
     // Apply --author filter: keep only comments from the specified user.
@@ -628,6 +676,7 @@ mod tests {
             inline: None,
             parent: parent_id.map(|pid| CommentParent { id: pid }),
             deleted: false,
+            resolution: None,
         }
     }
 
@@ -752,5 +801,49 @@ mod tests {
     fn test_collect_thread_not_found() {
         let comments = vec![mock_comment(1, None)];
         assert!(collect_thread(&comments, 999).is_err());
+    }
+
+    fn resolved_comment(id: u64, parent_id: Option<u64>) -> Comment {
+        use crate::client::CommentResolution;
+        Comment {
+            resolution: Some(CommentResolution {
+                state: "RESOLVED".to_string(),
+            }),
+            ..mock_comment_with_user(id, parent_id, "Tester", "t")
+        }
+    }
+
+    #[test]
+    fn test_filter_resolved_threads_removes_root_and_replies() {
+        // resolved root(1) -> reply(2); unresolved root(3)
+        let comments = vec![
+            resolved_comment(1, None),
+            mock_comment(2, Some(1)),
+            mock_comment(3, None),
+        ];
+        let filtered = filter_resolved_threads(comments);
+        let ids: Vec<u64> = filtered.iter().map(|c| c.id).collect();
+        assert_eq!(ids, vec![3]);
+    }
+
+    #[test]
+    fn test_filter_resolved_threads_keeps_all_when_none_resolved() {
+        let comments = vec![mock_comment(1, None), mock_comment(2, Some(1))];
+        let filtered = filter_resolved_threads(comments);
+        assert_eq!(filtered.len(), 2);
+    }
+
+    #[test]
+    fn test_filter_resolved_threads_only_hides_resolved_root() {
+        // Two roots: one resolved, one not; both have replies
+        let comments = vec![
+            resolved_comment(1, None),
+            mock_comment(2, Some(1)),
+            mock_comment(3, None),
+            mock_comment(4, Some(3)),
+        ];
+        let filtered = filter_resolved_threads(comments);
+        let ids: Vec<u64> = filtered.iter().map(|c| c.id).collect();
+        assert_eq!(ids, vec![3, 4]);
     }
 }

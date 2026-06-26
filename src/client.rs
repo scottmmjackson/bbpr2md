@@ -53,6 +53,14 @@ impl std::fmt::Display for TaskState {
     }
 }
 
+/// Represents the resolution state of a comment thread.
+#[allow(dead_code)]
+#[derive(Debug, Deserialize, Clone)]
+pub struct CommentResolution {
+    /// The resolution state: "RESOLVED" or "UNRESOLVED".
+    pub state: String,
+}
+
 /// Represents a pull request comment.
 #[allow(dead_code)]
 #[derive(Debug, Deserialize, Clone)]
@@ -74,6 +82,18 @@ pub struct Comment {
     /// Whether the comment was deleted.
     #[serde(default)]
     pub deleted: bool,
+    /// Resolution state if the thread has been resolved.
+    pub resolution: Option<CommentResolution>,
+}
+
+impl Comment {
+    /// Returns true if this comment's thread has been marked resolved.
+    pub fn is_resolved(&self) -> bool {
+        self.resolution
+            .as_ref()
+            .map(|r| r.state == "RESOLVED")
+            .unwrap_or(false)
+    }
 }
 
 /// Represents a link to a parent comment.

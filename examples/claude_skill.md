@@ -4,7 +4,7 @@ description: Fetch and format Bitbucket pull request descriptions, comments, and
 ---
 # Bitbucket PR Context Tool (bbpr2md)
 
-**Version**: 0.1.9
+**Version**: 0.1.10
 
 The `bbpr2md` tool allows you to retrieve a structured Markdown representation of a Bitbucket pull request.
 
@@ -17,6 +17,8 @@ The `bbpr2md` tool allows you to retrieve a structured Markdown representation o
 - **Single Thread**: Use `--comment <ID_OR_URL>` to fetch only the thread containing a specific comment.
 - **List Commenters**: Use `--list-users` to get a list of all unique users who commented on the PR.
 - **Author Filter**: Use `--author <USER>` to show only comments from a specific reviewer (matches display name or account ID).
+- **Hide Resolved**: Use `--hide-resolved` to suppress comment threads that have been resolved in Bitbucket, reducing noise.
+- **Inline Tasks**: Comment-linked tasks are rendered directly beneath their parent comment; only PR-level tasks appear in the global Tasks section.
 
 ### Usage
 
@@ -44,6 +46,7 @@ bbpr2md --remote upstream
 - `--comment <ID_OR_URL>` — Fetch only the thread containing a specific comment
 - `--list-users` — List all unique commenters (output: `Display Name (account_id)`, one per line)
 - `--author <USER>` — Filter output to comments from this user (display name or account ID, case-insensitive)
+- `--hide-resolved` — Suppress resolved comment threads (entire thread hidden when root is resolved)
 
 ### Use Cases
 - **Feedback Analysis**: Quickly see all reviewer comments across multiple files in a single view.
