@@ -57,7 +57,8 @@ impl std::fmt::Display for TaskState {
 #[allow(dead_code)]
 #[derive(Debug, Deserialize, Clone)]
 pub struct CommentResolution {
-    /// The resolution state: "RESOLVED" or "UNRESOLVED".
+    /// The resolution state: "RESOLVED" or "UNRESOLVED". Defaults to empty if absent.
+    #[serde(default)]
     pub state: String,
 }
 
