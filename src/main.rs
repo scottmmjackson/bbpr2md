@@ -134,8 +134,8 @@ enum SkillSubcommand {
         #[arg(short, long)]
         yes: bool,
     },
-    /// Install the Gemini skill.
-    Gemini {
+    /// Install the Codex skill.
+    Codex {
         /// Install globally in the home directory.
         #[arg(short, long)]
         global: bool,
@@ -243,11 +243,8 @@ fn collect_thread(comments: &[Comment], comment_id: u64) -> Result<Vec<Comment>>
 
     // Walk up the parent chain to locate the thread root.
     let mut root_id = comment_id;
-    loop {
-        match id_map[&root_id].parent.as_ref() {
-            Some(p) => root_id = p.id,
-            None => break,
-        }
+    while let Some(parent) = id_map[&root_id].parent.as_ref() {
+        root_id = parent.id;
     }
 
     // Build a children map for efficient descendant traversal.
@@ -327,8 +324,8 @@ async fn main() -> Result<()> {
                 SkillSubcommand::Claude { global, yes } => {
                     install_skill("Claude", global, yes)?;
                 }
-                SkillSubcommand::Gemini { global, yes } => {
-                    install_skill("Gemini", global, yes)?;
+                SkillSubcommand::Codex { global, yes } => {
+                    install_skill("Codex", global, yes)?;
                 }
             },
         }
@@ -410,7 +407,12 @@ async fn main() -> Result<()> {
                 "No --pr-id provided; searching for open PR from branch '{}'...",
                 branch
             );
-            let client_tmp = BitbucketClient::new(username.clone(), password.clone(), token.clone(), args.debug);
+            let client_tmp = BitbucketClient::new(
+                username.clone(),
+                password.clone(),
+                token.clone(),
+                args.debug,
+            );
             let prs = client_tmp
                 .find_open_prs_for_branch(&workspace, &repo_slug, &branch)
                 .await
@@ -439,29 +441,24 @@ async fn main() -> Result<()> {
         }
     };
 
-    let comment_id = args
-        .comment
-        .as_deref()
-        .map(parse_comment_id)
-        .transpose()?;
+    let comment_id = args.comment.as_deref().map(parse_comment_id).transpose()?;
 
     let client = BitbucketClient::new(username, password, token, args.debug);
 
-    let (include_description, include_comments, include_tasks) = if args.list_users {
-        (false, true, false)
-    } else if comment_id.is_some() {
-        (false, true, false)
-    } else if args.description_only {
-        (true, false, false)
-    } else if args.comments_only {
-        (false, true, false)
-    } else if args.tasks_only {
-        (false, false, true)
-    } else if args.comments_and_tasks {
-        (false, true, true)
-    } else {
-        (true, true, true)
-    };
+    let (include_description, include_comments, include_tasks) =
+        if args.list_users || comment_id.is_some() {
+            (false, true, false)
+        } else if args.description_only {
+            (true, false, false)
+        } else if args.comments_only {
+            (false, true, false)
+        } else if args.tasks_only {
+            (false, false, true)
+        } else if args.comments_and_tasks {
+            (false, true, true)
+        } else {
+            (true, true, true)
+        };
 
     let pr = if include_description {
         eprintln!("Fetching pull request details for #{}...", pr_id);
@@ -517,7 +514,10 @@ async fn main() -> Result<()> {
         for comment in &comments {
             if !comment.deleted && !seen.contains(&comment.user.account_id) {
                 seen.insert(comment.user.account_id.clone());
-                users.push((comment.user.display_name.clone(), comment.user.account_id.clone()));
+                users.push((
+                    comment.user.display_name.clone(),
+                    comment.user.account_id.clone(),
+                ));
             }
         }
         users.sort_by(|a, b| a.0.cmp(&b.0));
@@ -556,6 +556,7 @@ async fn main() -> Result<()> {
     Ok(())
 }
 
+/// Installs the embedded skill for an agent into the project or user skill directory.
 fn install_skill(agent: &str, global: bool, yes: bool) -> Result<()> {
     // Skill contents are embedded at compile time so the binary works without
     // the source tree present (e.g. when installed via Homebrew).
@@ -565,10 +566,10 @@ fn install_skill(agent: &str, global: bool, yes: bool) -> Result<()> {
             "bbpr2md",
             ".claude/skills",
         ),
-        "Gemini" => (
-            include_str!("../examples/gemini_skill/SKILL.md"),
-            "bbpr2md-bitbucket-pull-request-describer",
-            ".gemini/skills",
+        "Codex" => (
+            include_str!("../examples/codex_skill/SKILL.md"),
+            "bbpr2md",
+            ".agents/skills",
         ),
         _ => anyhow::bail!("Unsupported agent: {}", agent),
     };
@@ -660,7 +661,12 @@ mod tests {
         mock_comment_with_user(id, parent_id, "Tester", "t")
     }
 
-    fn mock_comment_with_user(id: u64, parent_id: Option<u64>, display_name: &str, account_id: &str) -> Comment {
+    fn mock_comment_with_user(
+        id: u64,
+        parent_id: Option<u64>,
+        display_name: &str,
+        account_id: &str,
+    ) -> Comment {
         Comment {
             id,
             content: Content {
@@ -845,5 +851,33 @@ mod tests {
         let filtered = filter_resolved_threads(comments);
         let ids: Vec<u64> = filtered.iter().map(|c| c.id).collect();
         assert_eq!(ids, vec![3, 4]);
+    }
+
+    #[test]
+    fn test_codex_skill_subcommand() {
+        let args = Args::try_parse_from(["bbpr2md", "skill", "codex", "--global", "--yes"])
+            .expect("codex skill command should parse");
+
+        match args.command {
+            Some(SubCommand::Skill {
+                agent: SkillSubcommand::Codex { global, yes },
+            }) => {
+                assert!(global);
+                assert!(yes);
+            }
+            _ => panic!("expected the Codex skill subcommand"),
+        }
+    }
+
+    #[test]
+    fn test_gemini_skill_subcommand_is_removed() {
+        assert!(Args::try_parse_from(["bbpr2md", "skill", "gemini"]).is_err());
+    }
+
+    #[test]
+    fn test_codex_skill_version_matches_package() {
+        let skill = include_str!("../examples/codex_skill/SKILL.md");
+        assert!(skill.contains(&format!("**Version**: {}", env!("CARGO_PKG_VERSION"))));
+        assert!(skill.contains("https://github.com/scottmmjackson/bbpr2md"));
     }
 }

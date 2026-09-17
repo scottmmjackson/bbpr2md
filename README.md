@@ -1,6 +1,6 @@
 # bbpr2md (Bitbucket Pull Request to Markdown)
 
-`bbpr2md` is a Rust CLI tool designed to fetch pull request comments and tasks from Bitbucket Cloud and format them into a clean Markdown document. This is primarily used as high-quality context for AI agents (like Claude or Gemini) to understand and address PR feedback.
+`bbpr2md` is a Rust CLI tool designed to fetch pull request comments and tasks from Bitbucket Cloud and format them into a clean Markdown document. This is primarily used as high-quality context for AI agents such as Claude and Codex to understand and address PR feedback.
 
 ## Zero-Config Usage (Git Remote Auto-Detection)
 
@@ -49,7 +49,7 @@ bbpr2md --pr-id 123  # or specify explicitly
 
 ## AI Agent Skill Installation
 
-`bbpr2md` can install a native skill into Claude or Gemini CLI so those agents know how to use the tool automatically. The skill content is embedded in the binary, so this works from any install method (Homebrew, direct download, etc.).
+`bbpr2md` can install a native skill into Claude or Codex so those agents know how to use the tool automatically. The skill content is embedded in the binary, so this works from any install method (Homebrew, direct download, etc.).
 
 ### Claude
 
@@ -64,14 +64,14 @@ bbpr2md skill claude --global
 bbpr2md skill claude --global --yes
 ```
 
-### Gemini CLI
+### Codex
 
 ```bash
-# Install into the current project's .gemini/skills/
-bbpr2md skill gemini
+# Install into the current project's .agents/skills/
+bbpr2md skill codex
 
-# Install globally into ~/.gemini/skills/
-bbpr2md skill gemini --global --yes
+# Install globally into ~/.agents/skills/
+bbpr2md skill codex --global --yes
 ```
 
 Once installed, the agent will automatically know how to invoke `bbpr2md` to gather PR context.
@@ -119,7 +119,7 @@ You can also use environment variables, which override the config file but are o
 
 The [examples/](./examples) directory contains:
 -   `config.toml`: A sample configuration file.
--   `claude_skill.md` / `gemini_skill/SKILL.md`: The skill definitions (use `bbpr2md skill` to install these rather than copying manually).
+-   `claude_skill.md` / `codex_skill/SKILL.md`: The skill definitions (use `bbpr2md skill` to install these rather than copying manually).
 
 ## Development
 

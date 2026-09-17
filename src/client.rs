@@ -383,7 +383,11 @@ impl BitbucketClient {
             if !resp.status().is_success() {
                 let status = resp.status();
                 if let Ok(err_resp) = resp.json::<BitbucketError>().await {
-                    anyhow::bail!("API request for PR listing failed ({}): {}", status, err_resp);
+                    anyhow::bail!(
+                        "API request for PR listing failed ({}): {}",
+                        status,
+                        err_resp
+                    );
                 } else {
                     anyhow::bail!("API request for PR listing failed with status {}", status);
                 }

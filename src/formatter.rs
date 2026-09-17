@@ -273,7 +273,10 @@ mod tests {
         let tasks = vec![
             Task {
                 id: 10,
-                content: Content { raw: "Inline task".to_string(), html: None },
+                content: Content {
+                    raw: "Inline task".to_string(),
+                    html: None,
+                },
                 state: TaskState::Unresolved,
                 creator: Some(mock_user()),
                 created_on: "2023-10-27T10:00:00Z".to_string(),
@@ -282,7 +285,10 @@ mod tests {
             },
             Task {
                 id: 11,
-                content: Content { raw: "Global task".to_string(), html: None },
+                content: Content {
+                    raw: "Global task".to_string(),
+                    html: None,
+                },
                 state: TaskState::Unresolved,
                 creator: Some(mock_user()),
                 created_on: "2023-10-27T10:00:00Z".to_string(),
@@ -301,7 +307,10 @@ mod tests {
         let tasks = vec![
             Task {
                 id: 10,
-                content: Content { raw: "Inline 1".to_string(), html: None },
+                content: Content {
+                    raw: "Inline 1".to_string(),
+                    html: None,
+                },
                 state: TaskState::Unresolved,
                 creator: None,
                 created_on: "2023-10-27T10:00:00Z".to_string(),
@@ -310,7 +319,10 @@ mod tests {
             },
             Task {
                 id: 11,
-                content: Content { raw: "Inline 2".to_string(), html: None },
+                content: Content {
+                    raw: "Inline 2".to_string(),
+                    html: None,
+                },
                 state: TaskState::Unresolved,
                 creator: None,
                 created_on: "2023-10-27T10:00:00Z".to_string(),
@@ -319,7 +331,10 @@ mod tests {
             },
             Task {
                 id: 12,
-                content: Content { raw: "Global".to_string(), html: None },
+                content: Content {
+                    raw: "Global".to_string(),
+                    html: None,
+                },
                 state: TaskState::Unresolved,
                 creator: None,
                 created_on: "2023-10-27T10:00:00Z".to_string(),
@@ -335,7 +350,10 @@ mod tests {
     fn test_tasks_heading_no_inline_annotation_when_none() {
         let tasks = vec![Task {
             id: 10,
-            content: Content { raw: "Global only".to_string(), html: None },
+            content: Content {
+                raw: "Global only".to_string(),
+                html: None,
+            },
             state: TaskState::Unresolved,
             creator: None,
             created_on: "2023-10-27T10:00:00Z".to_string(),
